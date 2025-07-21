@@ -1,1 +1,2 @@
-add_subdirectory(src)
+add_subdirectory(proto)
+add_subdirectory(rpc_framework)

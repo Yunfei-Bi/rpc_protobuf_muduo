@@ -245,8 +245,116 @@ void TcpConnection::stopReadInLoop() {
     }
 }
 
+/**
+ * connectEstablished：在事件循环线程中，
+ * 将连接状态设置为 kConnected，启用读事件，并调用连接回调函数
+ */
+void TcpConnection::connectEstablished() {
+    loop_->assertInLoopThread();
+    assert(state_ == kConencting);
+    setState(kConencted);
+    channel_->enableReading();
 
+    // 它的作用是在一个对象内部安全地获取指向自身的 std::shared_ptr 智能指针
+    connectionCallback_(shared_from_this());
+}
 
+/**
+ * connectDestroyed：在事件循环线程中，如果连接状态为 kConnected，
+ * 将状态设置为 kDisconnected，禁用所有事件，调用连接回调函数，并移除 Channel
+ */
+void TcpConnection::connectionDestroyed() {
+    loop_->assertInLoopThread();
+    if (state_ == kConnected) {
+        setState(kDisconnected);
+        channel_->disableAll();
 
+        connectionCallback_(shared_from_this());
+    }
+    channel_->remove();
+}
+
+/**
+ * 在事件循环线程中读取数据。如果读取成功，调用消息回调函数；
+ * 如果读取到 0 字节，调用 handleClose 关闭连接；
+ * 如果读取失败，记录错误信息并调用 handleError 处理错误。
+ */
+void TcpConnection::handleRead() {
+    loop_->assertInLoopThread();
+    int savedErrno = 0;
+    ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
+    if (n > 0) {
+        // messageCallback_ 调用的是 RpcChannel::onMessage
+        messageCallback_(shared_from_this(). &inputBuffer_);
+    } else if (n == 0) {
+        handleClose();
+    } else {
+        errno = savedErrno;
+        LOG(EEROR) << " TcpConnection::handleRead";
+        handleError();
+    }
+}
+
+/**
+ * 在事件循环线程中写入数据。如果写入成功，更新输出缓冲区；
+ * 如果输出缓冲区为空，禁用写事件，调用写完成回调函数；
+ * 如果连接状态为 kDisconnecting，调用 shutdownInLoop 关闭写端
+ */
+void TcpConnection::handleWrite() {
+    loop_->assertInLoopThread();
+    if (channel_->isWriting()) {
+        ssize_t n = sockets::write(channel_->fd(), outputBuffer_.peek(), 
+                                    outputBuffer_.readableBytes());
+
+        // sockets::write 函数的返回值，表示实际写入到 socket 文件描述符的数据字节数。
+        if (n > 0) {
+
+            // 这个函数的作用是丢弃缓冲区前面 len 字节的数据，并调整读指针。
+            outputBuffer_.retrieve(n);
+            if (outputBuffer_.readableBytes() == 0) {
+                channel_->disableWriting();
+                if (writeCompleteCallback_) {
+                    loop_->queueInLoop(
+                        std::bind(writeCompleteCallback_, shared_from_this()));
+                }
+                if (state_ == kDisconnecting) {
+                    shutdownInLoop();
+                }
+            }
+        }
+        else {
+            LOG(ERROR) << " TcpConnection::handleWrite ";
+        }
+    } else {
+        LOG(INFO) << " Connection fd = " << channel_->fd()
+                    << " is down, no more writing ";
+    }
+}
+
+/**
+ * 在事件循环线程中关闭连接。
+ * 将连接状态设置为 kDisconnected，禁用所有事件，
+ * 调用连接回调函数和关闭回调函数
+ */
+void TcpConnection::handleClose() {
+    loop_->assertInLoopThread();
+    LOG(INFO) << " fd = " << channel_->fd() << " state = "  << stateToString();
+    assert(state_ == kConnected || state_ == kDisconnecting);
+    setState(kDisconnected);
+    channel_->disableAll();
+
+    TcpConnectionPtr guardThis(shared_from_this());
+    connectionCallback_(guardThis);
+    closeCallback_(guradThis);
+}
+
+/**
+ * 在事件循环线程中处理错误，记录错误信息
+ */
+void TcpConnection::handleError() {
+    int err = sockets::getSocketErro(channel_->fd());
+    LOG(ERROR) << " TcpConnection::handleError [ " << name_
+                << " ] - SO_ERROR = " << err;
+}
 
 } // namespace network

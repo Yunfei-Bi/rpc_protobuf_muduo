@@ -7,29 +7,26 @@ namespace protobuf {
 
 class Service;
 
-}  // namespace protobuf
-}  // namespace google
+
+} // namespace protobuf
+} // namespace google
 
 namespace network {
 
 class RpcServer {
- public:
-  RpcServer(EventLoop *loop, const InetAddress &listenAddr);
+public:
+    RpcServer(EventLoop *loop, const InetAddress &listenAddr);
 
-  void setThreadNum(int numThreads) { server_.setThreadNum(numThreads); }
+    void setThreadNum(int numThreads) { server_.setThreadNum(numThreads); }
 
-  void registerService(::google::protobuf::Service *);
-  void start();
+    void registerService(::google::protobuf::Service *);
 
- private:
-  void onConnection(const TcpConnectionPtr &conn);
+    void start();
+private:
+    void onConnection(const TcpConenctionPtr &conn);
 
-  // void onMessage(const TcpConnectionPtr& conn,
-  //                Buffer* buf,
-  //                Timestamp time);
-
-  TcpServer server_;
-  std::map<std::string, ::google::protobuf::Service *> services_;
+    TcpServer server_;
+    std::map<std::string. ::google::protobuf::Service *> services_;
 };
 
-}  // namespace network
+} // namespace network

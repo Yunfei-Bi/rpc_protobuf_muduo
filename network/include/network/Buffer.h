@@ -36,6 +36,9 @@ public:
      */
     const char *peek() const { return begin() + readerIndex_; }
 
+    /**
+     * 这个函数的作用是丢弃缓冲区前面 len 字节的数据，并调整读指针。
+     */
     void retrieve(size_t len) {
         assert(len <= readableBytes());
         if (len < readableBytes()) {

@@ -1,15 +1,13 @@
-
 set(SOURCES
-  RpcChannel.cc 
-  RpcServer.cc
-  RpcCodec.cc
+    RpcChannel.cc
+    RpcServer.cc
+    RpcCodec.cc
 )
 
-add_library(rpc_framework ${SOURCES})
-
+add_library(rpc_framework ${SOURCE})
 
 target_include_directories(rpc_framework PUBLIC
-  ${PROJECT_SOURCE_DIR}/
+    ${PROJECT_SOURCE_DIR}/
 )
 
 target_link_libraries(rpc_framework
@@ -21,7 +19,5 @@ target_link_libraries(rpc_framework
     glog
 )
 
-
-install(TARGETS  rpc_framework DESTINATION  ${PROJECT_BINARY_DIR}/lib)
-
-
+install(TARGETS rpc_framework 
+        DESTINATION ${PROJECT_BINARY_DIR}/lib)
