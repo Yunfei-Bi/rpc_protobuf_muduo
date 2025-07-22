@@ -15,7 +15,7 @@ using namespace network;
  * 传入事件循环、监听地址和服务器名称 "RpcServer"
  * 这样每当有新连接时，server_ 会自动调用 RpcServer::onConnection 方法
  */
-RpcServer::RpcServer(EventLoop *loop, const InetADdress &listenAddr)
+RpcServer::RpcServer(EventLoop *loop, const InetAddress &listenAddr)
     : server_(loop, listenAddr, "RpcServer") {
     server_.setConnectionCallback(std::bind(&RpcServer::onConnection, this, _1));
 }
@@ -34,6 +34,10 @@ void RpcServer::registerService(google::protobuf::Service *service) {
 
 void RpcServer::start() { server_.start(); }
 
+/**
+ * 这段代码是 RpcServer 类中 onConnection 方法的实现，主要用于处理 TCP 连接的建立和断开。
+ * 它的作用是：当有新的客户端连接到 RPC 服务器，或者连接断开时，会自动调用这个函数进行相应的处理
+ */
 void RpcServer::onConnection(const TcpConnectionPtr &conn) {
     // 打印连接信息，包括客户端地址、服务器地址以及连接状态
     LOG(INFO) << "RpcServer - " << conn->peerAddress().toIpPort() << " -> "

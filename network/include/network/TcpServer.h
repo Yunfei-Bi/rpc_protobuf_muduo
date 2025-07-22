@@ -65,7 +65,7 @@ private:
     std::shared_ptr<EventLoopThreadPool> threadPool_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
-    WriteCompleteCallback wrteCompleteCallback_;
+    WriteCompleteCallback writeCompleteCallback_;
     ThreadInitCallback threadInitCallback_;
     std::atomic<bool> started_;
     int nextConnId_;
