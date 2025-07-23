@@ -33,7 +33,7 @@ RpcChannel::~RpcChannel() {
 /**
  * 这段代码是一个 RPC 框架中 RpcChannel 的 CallMethod 方法实现，作用是发起一次远程过程调用（RPC）请求。
  */
-void RpcChannelLLCallMethod(const ::google::protobuf::MethodDescriptor *method, 
+void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method, 
                             google::protobuf::RpcController *controller,
                             const ::google::protobuf::Message *request,
                             ::google::protobuf::Message *response,
@@ -171,7 +171,18 @@ void RpcChannel::handle_request_msg(const TcpConenctionPtr &conn, const RpcMessa
                     google::protobuf::Message *response =  // 创建响应消息对象
                         service->GetResponsePrototype(method).New();
                     int64_t id = message.id();
-                    service->Callback(
+
+                    /**
+                     * 这里的 CallMethod 是 protobuf Service 的虚函数，
+                     * 它会根据 method 描述，自动分发到你实现的具体方法（如 MonitorInfo）
+                     * 
+                     * 当 CallMethod 被调用时，最终会分发到你实现的 MonitorInfo。
+                     * 你在 MonitorInfo 里处理完业务逻辑，填充 response。
+                     * 你需要在业务逻辑最后调用 done->Run();
+                     * 这时，done 实际上就是 NewCallback(this, &RpcChannel::doneCallback, response, id) 生成的 Closure。
+                     * 所以，当你调用 done->Run() 时，框架就会自动调用 RpcChannel::doneCallback(response, id)
+                     */
+                    service->CallMethod(
                         method, NULL, request.get(), response,
                         NewCallback(this, &RpcChannel::doneCallback, response, id));
                     error = NO_ERROR; // 设置错误码为 NO_ERROR

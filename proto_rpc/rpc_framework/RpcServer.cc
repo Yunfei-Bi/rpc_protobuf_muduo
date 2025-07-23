@@ -52,7 +52,7 @@ void RpcServer::onConnection(const TcpConnectionPtr &conn) {
         // 为连接设置消息回调函数，当有消息到达时，会调用 RpcChannel 的 onMessage 函数进行处理
         conn->setMessageCallback(
             std::bind(&RpcChannel::onMessage, get_pointer(channel), _1, _2));
-        // 将 RpcChannel 对象存储到连接的上下文中，方便后续使用
+        // 把当前连接（conn）和它对应的 RpcChannel 对象关联起来，存储在连接的“上下文（context）”中
         conn->setContext(channel);
     } else {
         // 如果连接断开，将连接的上下文设置为空

@@ -23,6 +23,11 @@ private:
     std::thread::id threadId;
 };
 
+/**
+ * 这是一个线程局部静态变量。
+ * 每个线程都有自己独立的 t_loopInThisThread 指针，互不影响。
+ * 初始值为 nullptr。
+ */
 static thread_local EventLoop *t_loopInThisThread = nullptr;
 
 /**
@@ -43,6 +48,12 @@ void threadFunction() {
     t_loopInThisThread->printMemberVariableAddress();
 }
 
+/**
+ * t1 和 t2 都是子线程，它们是由主线程（也就是运行 main() 的线程）创建的。
+ * 主线程就是程序一启动时自动运行 main() 函数的那个线程。
+ * t1 和 t2 分别在各自的线程中执行 threadFunction()，
+ * 而主线程则负责创建它们、等待它们结束（join()），以及最后执行 delete t_loopInThisThread;。
+ */
 int main() {
     std::thread t1(threadFunction);
     std::thread t2(threadFunction);

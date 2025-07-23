@@ -22,7 +22,7 @@ public:
         channel_(new RpcChannel),
         stub_(get_pointer(channel_)) {
         client_.setConnectionCallback(
-            std::bind(&RpcChannel::onConnection, this, _1));
+            std::bind(&RpcClient::onConnection, this, _1));
         client_.setMessageCallback(
             std::bind(&RpcChannel::onMessage, get_pointer(channel_), _1, _2));
     }
@@ -40,6 +40,55 @@ public:
          * response：用于接收远程服务的响应
          * NewCallback(this, &RpcClient::closure, response)：回调函数，RPC 调用完成后会自动调用这个回调。
          * 这里传递了当前对象 this，成员函数指针 &RpcClient::closure，以及 response 作为参数
+         */
+
+        /**
+         * 在 protobuf RPC 框架中，MonitorInfo 这个方法在客户端的 stub（如 TestService::Stub）里只是一个代理函数。
+         * 你在客户端调用 stub->MonitorInfo(request, response, done)，并不是直接调用服务器上的函数，而是：
+         * 1. 把请求序列化成二进制数据。
+         * 2. 通过网络发送到服务器。
+         * 3. 服务器收到后，反序列化，调用真正的服务实现（如 MonitorInfo），处理完后把结果序列化发回客户端。
+         * 4. 客户端收到响应后，反序列化填充到 response 对象。
+         */
+
+        /**
+         * // 客户端代码
+         * stub->MonitorInfo(request, response, done); // 这里不会立刻有结果
+         * // 实际流程
+         * 1. stub->MonitorInfo() 只是发起请求
+         * 2. 事件循环驱动数据发送
+         * 3. 服务器收到请求，调用真正的 MonitorInfo 实现，填充 response
+         * 4. 服务器把 response 通过网络发回客户端
+         * 5. 客户端事件循环检测到响应到达，反序列化填充 response
+         * 6. 如果有 done 回调，自动调用
+         */
+
+        /**
+         * MonitorInfo 是你在 .proto 文件里定义的一个 RPC 服务方法，比如：
+         * service TestService {
+         *     rpc MonitorInfo (TestRequest) returns (TestResponse);
+         * }
+         * protoc 编译后，会自动生成 C++ 代码，包含：
+         * 服务基类（如 TestService::Service），里面有虚函数 MonitorInfo，需要你在服务器端继承并实现。
+         * 客户端存根类（如 TestService::Stub），里面有 MonitorInfo 方法，负责发起 RPC 请求。
+         * 客户端中的Stub中的MonitorInfo 方法不是本地实现，
+         * 而是把请求序列化后通过网络发给服务器，服务器收到后调用你实现的 MonitorInfo，处理完再把结果返回客户端。
+         * 总结: 
+         * MonitorInfo 的真正实现是在服务器端，由你继承并重写 proto 生成的 Service 基类的虚函数。
+         * 客户端的 MonitorInfo 只是一个代理，负责发起 RPC 请求，实际处理逻辑在服务器端。
+         */
+
+        /**
+         * 数据是怎么“发出去”的？
+         * stub_.MonitorInfo(...) 内部会调用 RpcChannel::CallMethod，
+         * 而 RpcChannel 里会把数据写入发送缓冲区，并注册/激活 socket 的“可写事件”。
+         * Stub 不关心底层通信细节，它只知道要把请求交给 RpcChannel。
+         * 所以，所有的 Stub 方法（如 MonitorInfo）内部最终都会调用 RpcChannel::CallMethod，让通道负责实际的网络通信
+         */
+
+        /**
+         * NewCallback 用于生成一个“回调对象”，当异步操作完成时自动调用你指定的成员函数或普通函数。
+         * NewCallback 生成的回调对象的“异步操作完成”，指的是“收到来自服务端的回复”
          */
         stub_.MonitorInfo(NULL, &request, response,
                             NewCallback(this, &RpcClient::closure, response));
@@ -64,13 +113,19 @@ private:
         }
     }
 
-    void closure(monitor:TestResponse *resq) {
-        LOG(INFO) << " resq: \n " << resq->DebugString();
+    void closure(monitor:TestResponse *resp) {
+        LOG(INFO) << " resp: \n " << resp->DebugString();
     }
 
     EventLoop *loop_;
     TcpClient client_;
     TpcChannelPtr channel_;
+
+    /**
+     * 这是由 protobuf 的 service 语法自动生成的客户端存根（Stub）对象。
+     * 作用：Stub 封装了 RPC 客户端调用的细节，让你像调用本地函数一样去调用远程服务
+     * monitor::TestService 是你在 .proto 文件里定义的服务名，Stub 是 protoc 生成的内部类，专门用于客户端
+     */
     monitor::TestService::Stub stub_;
 };
 

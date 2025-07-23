@@ -46,7 +46,7 @@ public:
             ProtobufMessageCallback;
     typedef std::shared_ptr<google::protobuf::Message> MessagePtr;
 
-    explicit ProtoRpcCodec(cosnt ProtobufMessageCallback &messageCb)
+    explicit ProtoRpcCodec(const ProtobufMessageCallback &messageCb)
         : messageCallback_(messageCb) {}
     ~ProtoRpcCodec() {}
 
@@ -69,7 +69,7 @@ public:
     static int32_t asInt32(const char *buf);
 
 private:
-    ProtobufMessageVallback messageCallback_;
+    ProtobufMessageCallback messageCallback_;
     int kMinMessageLen = 4;
     const std::string tag_ = "RPC0";
 

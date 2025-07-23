@@ -45,6 +45,7 @@ namespace network
                 ErrorCode errorCode = parse(buf->peek() + kHeaderLen, len, message.get());
 
                 // 如果解析成功（kNoError），就调用 messageCallback_ 处理这条消息，并从缓冲区移除这条消息的数据。
+                // 这里的messageCallback_ 是 RpcChannel::onRpcMessage
                 if (errorCode == kNoError)
                 {
                     messageCallback_(conn, message);
@@ -168,7 +169,7 @@ namespace network
      * 这段代码是 ProtoRpcCodec::filEmptyBuffer 方法的实现，
      * 作用是把一个 protobuf 消息对象序列化并封装成完整的网络数据包，写入到空的缓冲区 buf 中。
      */
-    void ProtoRpcCodec::filEmptyBuffer(Buffer *buf, const google::protobuf::Message &message)
+    void ProtoRpcCodec::fillEmptyBuffer(Buffer *buf, const google::protobuf::Message &message)
     {
         assert(buf->readableBytes() == 0);
 

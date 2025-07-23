@@ -67,6 +67,11 @@ private:
     std::atomic<int64_t> id_;
 
     std::mutex mutex_;
+
+    /**
+     * outstandings_ 的核心作用就是“请求-响应的唯一对应表”。
+     * 让客户端能在收到响应时，准确找到是哪个请求的结果，并调用正确的回调。
+     */
     std::map<int64_t, OutstandingCall> outstandings_;
     const std::map<std::string, ::google::protobuf::Service *> services_;
 };

@@ -4,7 +4,7 @@
 #include <string>
 #include <glog/logging.h>
 
-#include "network/TcpCOnnection.h"
+#include "network/TcpConnection.h"
 #include "network/Channel.h"
 #include "netwrok/EventLoop.h"
 #include "network/Socket.h"
@@ -105,7 +105,7 @@ void TcpConnection::sendInLoop(const void *data, size_t len) {
     }
 
     if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0) {
-        nwrote = sockets::write(cahnnel_->fd(), data, len);
+        nwrote = sockets::write(channel_->fd(), data, len);
         if (nwrote >= 0) {
             remaining = len - nwrote;
             if (remaining == 0 && writeCompleteCallback_) {
@@ -285,7 +285,7 @@ void TcpConnection::handleRead() {
     ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
     if (n > 0) {
         // messageCallback_ 调用的是 RpcChannel::onMessage
-        messageCallback_(shared_from_this(). &inputBuffer_);
+        messageCallback_(shared_from_this(), &inputBuffer_);
     } else if (n == 0) {
         handleClose();
     } else {
